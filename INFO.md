@@ -1,5 +1,3 @@
-Statement_id : SIH1744
-
 Title: Creating a cyber triage tool to streamline digital forensic investigation
 
 Technology_Bucket: Blockchain & Cybersecurity

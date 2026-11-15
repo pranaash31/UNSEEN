@@ -17,14 +17,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 # C-Extension Import Handling with Graceful Fallbacks
 # ---------------------------------------------------------------------------
 try:
-    import pyewf
+    import pyewf  # type: ignore
     HAS_PYEWF = True
 except ImportError:
     pyewf = None
     HAS_PYEWF = False
 
 try:
-    import pytsk3
+    import pytsk3  # type: ignore
     HAS_PYTSK3 = True
 except ImportError:
     pytsk3 = None
