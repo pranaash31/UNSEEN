@@ -1,0 +1,48 @@
+# Step 1.1 – Forensic Image Handling and Partition Discovery
+
+## 1. Objective
+
+To develop a unified, read-only mechanism for accessing forensic disk images in RAW and E01 formats. The module identifies disk partitions without intentionally modifying the acquired evidence, ensuring its integrity throughout the investigation.
+
+## 2. Key Concepts and Technologies
+
+**Forensic Disk Image:** A sector-level copy of a storage device used for digital forensic investigation without directly examining the original device.
+
+**RAW (.dd):** An uncompressed image format that stores acquired disk sectors as a continuous sequence of bytes.
+
+**E01 (Expert Witness Format):** A structured forensic image format that supports data compression, segmentation, acquisition metadata, and embedded integrity information.
+
+**pyewf:** A Python library used to access and read E01 forensic images, including compressed data and multiple image segments.
+
+**pytsk3.Img_Info:** A base interface from The Sleuth Kit (TSK) used to provide a common method of accessing forensic disk image data.
+
+**pytsk3.Volume_Info:** A component of pytsk3 that identifies disk partitions and interprets partition tables such as MBR (Master Boot Record) and GPT (GUID Partition Table).
+
+## 3. Technical Implementation
+
+The module uses a custom Python class derived from `pytsk3.Img_Info` to support multiple forensic image formats through a unified interface.
+
+- RAW images are accessed using binary read operations.
+- E01 images are accessed through the pyewf library.
+- The custom image adapter provides a common byte-reading mechanism.
+- pytsk3.Volume_Info analyzes the image to identify partition boundaries, starting sectors, and partition sizes.
+
+## 4. Internal Working Process
+
+1. **Image Input:** The investigator selects a forensic disk image.
+2. **Format Detection:** The application identifies whether the image is RAW or E01.
+3. **Image Reading:** The appropriate reader accesses the image data.
+4. **Unified Abstraction:** The custom Img_Info adapter provides a consistent read interface.
+5. **Partition Analysis:** Volume_Info interprets the partition table and identifies available partitions.
+6. **Output:** Partition information is provided to the subsequent filesystem analysis module.
+
+## 5. Expected Outcome
+
+The module provides a standardized mechanism for accessing RAW and E01 forensic images, discovering their partition structures, and preparing them for further filesystem examination while maintaining evidence integrity.
+
+## 6. Evidence Integrity Considerations
+
+- Original forensic images must be treated as read-only.
+- Image hashes should be calculated and verified before and after analysis.
+- E01 acquisition metadata and recorded hashes should be validated where available.
+- All investigation outputs should be stored separately from the original evidence.
