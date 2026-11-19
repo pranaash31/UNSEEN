@@ -9,3 +9,11 @@
 - Hash Comparison: Compares calculated hashes with original acquisition hashes to detect changes.
 - MB/s Monitoring: Displays the speed of image processing.
 - Cancellation: Allows investigators to stop ongoing processing.
+
+3. Internal Working
+1. Investigator imports a RAW or E01 forensic image.
+2. QRunnable processes the image in a background thread.
+3. The image is read in 8 MB chunks while calculating three hashes simultaneously.
+4. Calculated hashes are compared with recorded acquisition hashes.
+5. MBR/GPT partition information is identified.
+6. Results are packaged into an IntakeVerificationResult report.
