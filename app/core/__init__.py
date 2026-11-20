@@ -1,5 +1,12 @@
-"""Core digital forensics and incident response parsing and intake modules."""
+"""Core digital forensics and incident response parsing, intake, and legal compliance modules."""
 
+from .bsa_certificate import (
+    BSACaseDetails,
+    BSACertificate,
+    BSACustodianDetails,
+    BSAExpertDetails,
+    generate_bsa_certificate,
+)
 from .image_reader import (
     EWFImgInfo,
     ForensicImageReader,
@@ -30,4 +37,9 @@ __all__ = [
     "IntakeVerificationResult",
     "OperationCancelledError",
     "DEFAULT_CHUNK_SIZE",
+    "BSACertificate",
+    "BSACaseDetails",
+    "BSACustodianDetails",
+    "BSAExpertDetails",
+    "generate_bsa_certificate",
 ]
