@@ -1,4 +1,4 @@
-"""Core digital forensics and incident response parsing, intake, and legal compliance modules."""
+"""Core digital forensics and incident response parsing, intake, chain of custody, and legal compliance modules."""
 
 from .bsa_certificate import (
     BSACaseDetails,
@@ -6,6 +6,14 @@ from .bsa_certificate import (
     BSACustodianDetails,
     BSAExpertDetails,
     generate_bsa_certificate,
+)
+from .custody_ledger import (
+    CustodyAction,
+    CustodyEntry,
+    CustodyLedger,
+    LedgerVerificationResult,
+    compute_merkle_root,
+    compute_sha256,
 )
 from .image_reader import (
     EWFImgInfo,
@@ -42,4 +50,10 @@ __all__ = [
     "BSACustodianDetails",
     "BSAExpertDetails",
     "generate_bsa_certificate",
+    "CustodyLedger",
+    "CustodyAction",
+    "CustodyEntry",
+    "LedgerVerificationResult",
+    "compute_merkle_root",
+    "compute_sha256",
 ]

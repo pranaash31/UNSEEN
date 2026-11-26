@@ -10,6 +10,7 @@
     - MB/s Monitoring: Tracks throughput and calculates remaining processing time.
     - Cancellation: Allows investigators to safely stop ongoing processing without data corruption.
     - BSA Section 63(4) Statutory Compliance: Automates the generation of the mandatory two-part certificate (Part A Custodian + Part B Forensic Expert) replacing Section 65B of the Indian Evidence Act.
+    - Blockchain & Merkle Hash Chain: Cryptographically links every investigative action into an append-only ledger (`custody_chain.json`) to defeat defense claims of evidence tampering.
 
 3. Internal Working
     1. Investigator imports a RAW or E01 forensic image.
@@ -32,3 +33,15 @@
       - Part A (Signed by Custodian / Seizing Officer): Details device make, model, serial number/IMEI, custody timeline, and affirms no tampering occurred during lawful custody.
       - Part B (Signed by Forensic Expert / Examiner): Records forensic bit-stream imaging tools, acquisition media size, cryptographic hash values (SHA-256, SHA-1, MD5), partition layouts, and certifies integrity against acquisition baselines.
     - Automating this manifest at intake eliminates manual transcription errors in 64-character SHA-256 strings, saves hours of paperwork for NIA officers, and establishes an airtight chain-of-custody.
+
+6. Unbroken Chain of Custody (custody_ledger.py — Blockchain Bucket)
+    - **Defense Challenge:** In high-profile trials, defense attorneys routinely allege that digital evidence was planted, altered, or manipulated while in police/agency custody.
+    - **Cryptographic Solution:** UNSEEN builds an append-only SHA-256 Merkle hash chain saved to `custody_chain.json`.
+    - **Action Chaining:** Every action in the investigative lifecycle (Intake -> Scan -> Artifact Pinned -> Report Exported) is recorded with:
+      - Monotonically increasing index.
+      - Synchronized UTC and Indian Standard Time (IST) timestamps.
+      - Operating Officer Badge ID and name.
+      - SHA-256 hash of the action payload.
+      - Backward cryptographic link to the preceding block hash.
+      - Cumulative binary Merkle root.
+    - **Mathematical Proof:** If a single byte in `custody_chain.json`, an evidence file, or an investigative log is altered post-seizure, the block hash recalculation and Merkle tree root fail immediately, pin-pointing the exact altered block and preserving full court transparency.
