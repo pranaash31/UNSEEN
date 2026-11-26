@@ -12,6 +12,7 @@ from .custody_ledger import (
     CustodyEntry,
     CustodyLedger,
     LedgerVerificationResult,
+    OfficerIdentity,
     compute_merkle_root,
     compute_sha256,
 )
@@ -54,6 +55,7 @@ __all__ = [
     "CustodyAction",
     "CustodyEntry",
     "LedgerVerificationResult",
+    "OfficerIdentity",
     "compute_merkle_root",
     "compute_sha256",
 ]
