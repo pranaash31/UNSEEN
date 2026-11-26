@@ -34,14 +34,19 @@
       - Part B (Signed by Forensic Expert / Examiner): Records forensic bit-stream imaging tools, acquisition media size, cryptographic hash values (SHA-256, SHA-1, MD5), partition layouts, and certifies integrity against acquisition baselines.
     - Automating this manifest at intake eliminates manual transcription errors in 64-character SHA-256 strings, saves hours of paperwork for NIA officers, and establishes an airtight chain-of-custody.
 
-6. Unbroken Chain of Custody (custody_ledger.py — Blockchain Bucket)
-    - **Defense Challenge:** In high-profile trials, defense attorneys routinely allege that digital evidence was planted, altered, or manipulated while in police/agency custody.
-    - **Cryptographic Solution:** UNSEEN builds an append-only SHA-256 Merkle hash chain saved to `custody_chain.json`.
+6. Unbroken Chain of Custody & Officer Digital Signatures (custody_ledger.py — Blockchain Bucket)
+    - **Defense Challenge:** In high-profile counter-terror trials, defense attorneys routinely allege that digital evidence was planted, altered, or manipulated while in police/agency custody, or that unauthorized officers tampered with the case files.
+    - **Cryptographic Solution:** UNSEEN builds an append-only SHA-256 Merkle hash chain saved to `custody_chain.json` with integrated Ed25519 asymmetric digital signatures.
+    - **Officer Digital Signatures (Ed25519 Non-Repudiation):**
+      - Each investigating officer holds a private/public Ed25519 keypair (`OfficerIdentity`).
+      - Every action in the custody chain is digitally signed with the officer's private key over the block header hash.
+      - The officer's 32-byte public key (`officer_public_key`) and 64-byte signature (`signature`) are permanently embedded in the block.
+      - `verify_chain()` mathematically verifies the Ed25519 signature on every block, legally proving non-repudiation: that only the authorized officer performed the action.
     - **Action Chaining:** Every action in the investigative lifecycle (Intake -> Scan -> Artifact Pinned -> Report Exported) is recorded with:
       - Monotonically increasing index.
       - Synchronized UTC and Indian Standard Time (IST) timestamps.
-      - Operating Officer Badge ID and name.
+      - Operating Officer Badge ID, name, public key, and Ed25519 signature.
       - SHA-256 hash of the action payload.
       - Backward cryptographic link to the preceding block hash.
       - Cumulative binary Merkle root.
-    - **Mathematical Proof:** If a single byte in `custody_chain.json`, an evidence file, or an investigative log is altered post-seizure, the block hash recalculation and Merkle tree root fail immediately, pin-pointing the exact altered block and preserving full court transparency.
+    - **Mathematical Proof:** If a single byte in `custody_chain.json`, an evidence file, an officer public key, or a signature is altered post-seizure, the block hash recalculation, digital signature validation, and Merkle tree root fail immediately, pin-pointing the exact altered block and preserving full court transparency.
