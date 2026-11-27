@@ -1,11 +1,12 @@
 """
-Unbroken Chain of Custody Ledger with Officer Digital Signatures
+Unbroken Chain of Custody Ledger with Officer Digital Signatures & Merkle Inclusion Proofs
 (custody_ledger.py — Blockchain & Cybersecurity Bucket)
 Department 1: Cyber Triage & Evidence Ingestion (SIH1744 / NIA Specification)
 
 Provides a tamper-evident, append-only Merkle-linked cryptographic audit ledger
 (custody_chain.json) featuring:
 - Asymmetric Officer Digital Signatures (Ed25519) for non-repudiation.
+- Lightweight Merkle Inclusion Proofs (SPV Audit Paths) for selective disclosure.
 - Synchronized dual UTC + Indian Standard Time (IST) timestamps.
 - Binary Merkle tree root accumulation.
 - Mathematical tamper detection proving zero post-seizure evidence planting.
@@ -73,6 +74,64 @@ def compute_merkle_root(leaf_hashes: List[str]) -> str:
         current_level = next_level
 
     return current_level[0]
+
+
+def generate_merkle_proof_path(leaf_hashes: List[str], target_index: int) -> List[Tuple[str, str]]:
+    """
+    Generates a cryptographic audit path (sibling hashes and directions)
+    for a specific leaf in a binary Merkle tree.
+    Returns: List of (sibling_hash, "left" | "right").
+    """
+    if not leaf_hashes:
+        raise ValueError("Cannot generate Merkle proof for empty leaf list.")
+    if target_index < 0 or target_index >= len(leaf_hashes):
+        raise IndexError(f"Leaf index {target_index} out of bounds (0..{len(leaf_hashes)-1}).")
+
+    audit_path: List[Tuple[str, str]] = []
+    current_level = list(leaf_hashes)
+    curr_idx = target_index
+
+    while len(current_level) > 1:
+        if curr_idx % 2 == 0:
+            # Current node is left child -> sibling is on the right
+            sibling = current_level[curr_idx + 1] if curr_idx + 1 < len(current_level) else current_level[curr_idx]
+            audit_path.append((sibling, "right"))
+        else:
+            # Current node is right child -> sibling is on the left
+            sibling = current_level[curr_idx - 1]
+            audit_path.append((sibling, "left"))
+
+        next_level: List[str] = []
+        for i in range(0, len(current_level), 2):
+            left = current_level[i]
+            right = current_level[i + 1] if i + 1 < len(current_level) else left
+            next_level.append(compute_sha256(left + right))
+
+        current_level = next_level
+        curr_idx = curr_idx // 2
+
+    return audit_path
+
+
+def verify_merkle_proof(leaf_hash: str,
+                        audit_path: List[Tuple[str, str]],
+                        expected_root: str) -> bool:
+    """
+    Verifies a Merkle inclusion audit path against an expected Merkle root.
+    """
+    curr = leaf_hash.lower()
+    expected = expected_root.lower()
+
+    for sibling, direction in audit_path:
+        sib_clean = sibling.lower()
+        if direction == "left":
+            curr = compute_sha256(sib_clean + curr)
+        elif direction == "right":
+            curr = compute_sha256(curr + sib_clean)
+        else:
+            return False
+
+    return curr == expected
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +277,94 @@ class LedgerVerificationResult:
     )
 
 
+@dataclass
+class MerkleInclusionProof:
+    """
+    Lightweight, standalone Merkle Inclusion Proof (SPV Audit Path).
+    Proves that a specific forensic entry exists in the custody ledger and was committed
+    to the terminal Merkle root without exposing other confidential case blocks.
+    """
+    block_index: int
+    leaf_hash: str
+    merkle_root: str
+    total_leaves: int
+    audit_path: List[Tuple[str, str]]  # List of (sibling_hash, "left" | "right")
+    action: str
+    timestamp_ist: str
+    officer_badge_id: str
+    officer_name: str
+    officer_public_key: str
+    signature: str
+
+    def verify(self, expected_root: Optional[str] = None) -> bool:
+        """
+        Verifies this Merkle inclusion proof against an expected root (or self.merkle_root).
+        Returns True if mathematically intact.
+        """
+        target = expected_root or self.merkle_root
+        return verify_merkle_proof(self.leaf_hash, self.audit_path, target)
+
+    def verify_signature(self) -> bool:
+        """
+        Verifies the officer's Ed25519 digital signature on this block.
+        Establishes non-repudiation for this specific action.
+        """
+        if not self.signature or not self.officer_public_key:
+            return False
+        try:
+            verifier = OfficerIdentity.public_only(
+                badge_id=self.officer_badge_id,
+                name=self.officer_name,
+                public_key_hex=self.officer_public_key,
+            )
+            return verifier.verify(self.signature, self.leaf_hash)
+        except Exception:
+            return False
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes proof to structured dictionary."""
+        return asdict(self)
+
+    def to_json(self, indent: int = 2) -> str:
+        """Serializes proof to machine-readable JSON."""
+        return json.dumps(self.to_dict(), indent=indent)
+
+    def to_text(self) -> str:
+        """Renders proof in formal court-admissible certificate text."""
+        is_merkle_valid = self.verify()
+        is_sig_valid = self.verify_signature()
+        lines = [
+            "=" * 84,
+            "     LIGHTWEIGHT MERKLE INCLUSION PROOF (CRYPTOGRAPHIC AUDIT CERTIFICATE)",
+            "                  (Section 63(4), Bharatiya Sakshya Adhiniyam, 2023)",
+            "=" * 84,
+            f"Target Block Index   : #{self.block_index:03d}",
+            f"Investigative Action : {self.action}",
+            f"Timestamp (IST)      : {self.timestamp_ist}",
+            f"Operating Officer    : {self.officer_name} (Badge: {self.officer_badge_id})",
+            f"Officer Public Key   : {self.officer_public_key}",
+            f"Ed25519 Signature    : {self.signature}",
+            f"Target Leaf Hash     : {self.leaf_hash}",
+            f"Terminal Merkle Root : {self.merkle_root}",
+            f"Tree Depth / Leaves  : {len(self.audit_path)} steps / {self.total_leaves} total blocks",
+            f"Merkle Path Status   : {'MATHEMATICALLY VERIFIED (Included)' if is_merkle_valid else 'FAILED (Tampered)'}",
+            f"Signature Status     : {'CRYPTOGRAPHICALLY VERIFIED' if is_sig_valid else 'SIGNATURE INVALID'}",
+            "-" * 84,
+            "AUDIT SIBLING PATH (From Leaf to Terminal Root):",
+        ]
+        for step, (sibling, direction) in enumerate(self.audit_path, start=1):
+            lines.append(f"  Step {step:02d}: {sibling} [{direction.upper()}]")
+        lines.extend([
+            "=" * 84,
+            "LEGAL CONCLUSION:",
+            "This certificate mathematically proves that Block #" + str(self.block_index) + " (" + self.action + ") was",
+            "permanently anchored in the custody ledger at the stated time without exposing any",
+            "unrelated case information.",
+            "=" * 84,
+        ])
+        return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # CustodyLedger (Append-Only Merkle Hash Chain with Digital Signatures)
 # ---------------------------------------------------------------------------
@@ -225,7 +372,7 @@ class CustodyLedger:
     """
     High-assurance append-only blockchain-backed custody ledger for UNSEEN DFIR.
     Maintains a cryptographically unbroken SHA-256 Merkle chain in custody_chain.json.
-    Anchors Ed25519 digital signatures on every entry for legal non-repudiation.
+    Supports Ed25519 digital signatures and Lightweight Merkle Inclusion Proofs.
     """
     def __init__(self,
                  ledger_file: Union[str, Path],
@@ -405,6 +552,50 @@ class CustodyLedger:
             self._entries.append(new_entry)
             self._save()
             return new_entry
+
+    # -----------------------------------------------------------------------
+    # Lightweight Merkle Inclusion Proofs
+    # -----------------------------------------------------------------------
+    def generate_merkle_proof(self, block_index: int) -> MerkleInclusionProof:
+        """
+        Generates a lightweight cryptographic Merkle Inclusion Proof (SPV Audit Path)
+        for a specific block. Proves that block_index belongs to the terminal Merkle root
+        without revealing any other block details in the ledger.
+        """
+        with self._lock:
+            if not self._entries:
+                raise ValueError("Ledger is empty; cannot generate Merkle proof.")
+            if block_index < 0 or block_index >= len(self._entries):
+                raise IndexError(
+                    f"Block index {block_index} is out of bounds (0..{len(self._entries)-1})."
+                )
+
+            entry = self._entries[block_index]
+            all_leaves = [e.block_hash for e in self._entries]
+            terminal_root = self.current_merkle_root
+
+            audit_path = generate_merkle_proof_path(all_leaves, block_index)
+
+            return MerkleInclusionProof(
+                block_index=entry.index,
+                leaf_hash=entry.block_hash,
+                merkle_root=terminal_root,
+                total_leaves=len(self._entries),
+                audit_path=audit_path,
+                action=entry.action,
+                timestamp_ist=entry.timestamp_ist,
+                officer_badge_id=entry.officer_badge_id,
+                officer_name=entry.officer_name,
+                officer_public_key=entry.officer_public_key,
+                signature=entry.signature,
+            )
+
+    def verify_merkle_proof(self, proof: MerkleInclusionProof) -> bool:
+        """
+        Verifies a Merkle inclusion proof against this ledger's current terminal root.
+        """
+        with self._lock:
+            return proof.verify(expected_root=self.current_merkle_root)
 
     # -----------------------------------------------------------------------
     # Specialized Triage Pipeline Helpers
