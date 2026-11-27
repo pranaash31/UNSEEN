@@ -12,9 +12,12 @@ from .custody_ledger import (
     CustodyEntry,
     CustodyLedger,
     LedgerVerificationResult,
+    MerkleInclusionProof,
     OfficerIdentity,
     compute_merkle_root,
     compute_sha256,
+    generate_merkle_proof_path,
+    verify_merkle_proof,
 )
 from .image_reader import (
     EWFImgInfo,
@@ -56,6 +59,9 @@ __all__ = [
     "CustodyEntry",
     "LedgerVerificationResult",
     "OfficerIdentity",
+    "MerkleInclusionProof",
     "compute_merkle_root",
     "compute_sha256",
+    "generate_merkle_proof_path",
+    "verify_merkle_proof",
 ]
