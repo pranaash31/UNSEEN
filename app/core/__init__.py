@@ -35,6 +35,11 @@ from .intake_worker import (
     IntakeVerificationResult,
     OperationCancelledError,
 )
+from .tsa_client import (
+    RFC3161Client,
+    RFC3161TimestampToken,
+    request_tsa_timestamp,
+)
 
 __all__ = [
     "ForensicImageReader",
@@ -64,4 +69,7 @@ __all__ = [
     "compute_sha256",
     "generate_merkle_proof_path",
     "verify_merkle_proof",
+    "RFC3161Client",
+    "RFC3161TimestampToken",
+    "request_tsa_timestamp",
 ]
